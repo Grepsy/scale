@@ -1,0 +1,55 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test-kit:
+    name: MiScaleKit tests
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run tests
+        working-directory: MiScaleKit
+        run: swift test
+
+  build-watch-app:
+    name: Build watch app
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show Xcode and SDKs
+        run: |
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i watch || true
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen
+      - name: Build (unsigned, for device)
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project MiScaleHealth.xcodeproj \
+            -scheme MiScaleHealth \
+            -destination 'generic/platform=watchOS' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee build.log | grep -E 'error:|warning:|BUILD (SUCCEEDED|FAILED)' || true
+          grep -q 'BUILD SUCCEEDED' build.log
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+
+  python-selftest:
+    name: Python reference self-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/miscale_sniff.py --selftest
