@@ -1,0 +1,50 @@
+# Generate the Xcode project with:  brew install xcodegen && xcodegen
+name: MiScaleHealth
+options:
+  bundleIdPrefix: com.example   # change to your own reverse-DNS prefix
+  deploymentTarget:
+    watchOS: "10.0"
+  createIntermediateGroups: true
+
+packages:
+  MiScaleKit:
+    path: MiScaleKit
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""        # set your team here or in Xcode › Signing & Capabilities
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+  MiScaleHealth:
+    type: application
+    platform: watchOS
+    sources:
+      - App
+    dependencies:
+      - package: MiScaleKit
+      - sdk: HealthKit.framework
+      - sdk: CoreBluetooth.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.MiScaleHealth
+        PRODUCT_NAME: Scale
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Scale
+        WKApplication: true
+        WKWatchOnly: true
+        WKRunsIndependentlyOfCompanionApp: true
+        NSBluetoothAlwaysUsageDescription: Scale listens for your Mi Body Composition Scale's Bluetooth broadcasts to read your weight.
+        NSHealthShareUsageDescription: Scale reads your height, date of birth and sex to calculate BMI and body composition.
+        NSHealthUpdateUsageDescription: Scale saves your weight, BMI, body fat percentage and lean body mass to Health.
+    entitlements:
+      path: App/MiScaleHealth.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
