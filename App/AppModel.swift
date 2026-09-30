@@ -1,6 +1,7 @@
 import Foundation
 import MiScaleKit
 import WatchKit
+import WidgetKit
 
 struct UserProfile: Codable, Equatable {
     var heightCm: Double = 170
@@ -39,7 +40,12 @@ final class AppModel: ObservableObject {
     @Published private(set) var healthStatus: HealthStatus = .idle
     @Published private(set) var history: [MeasurementRecord]
     @Published var profile: UserProfile { didSet { Self.persist(profile, key: Keys.profile) } }
-    @Published var settings: AppSettings { didSet { Self.persist(settings, key: Keys.settings) } }
+    @Published var settings: AppSettings {
+        didSet {
+            Self.persist(settings, key: Keys.settings)
+            if settings.usePounds != oldValue.usePounds { refreshWidget() }
+        }
+    }
 
     let scanner = ScaleScanner()
     private let health = HealthKitManager()
@@ -66,6 +72,7 @@ final class AppModel: ObservableObject {
 
     func activate() {
         scanner.start()
+        refreshWidget()
         Task { await prepareHealth() }
     }
 
@@ -143,6 +150,7 @@ final class AppModel: ObservableObject {
     func delete(_ record: MeasurementRecord) {
         history.removeAll { $0.id == record.id }
         Self.persist(history, key: Keys.history)
+        refreshWidget()
     }
 
     func forgetScale() {
@@ -157,6 +165,24 @@ final class AppModel: ObservableObject {
             if history.count > Self.historyLimit { history.removeLast(history.count - Self.historyLimit) }
         }
         Self.persist(history, key: Keys.history)
+        refreshWidget()
+    }
+
+    // MARK: Widget
+
+    private static let appGroup = Bundle.main.object(forInfoDictionaryKey: "AppGroupID") as? String ?? ""
+
+    /// Publishes the latest weigh-in to the Smart Stack widget.
+    private func refreshWidget() {
+        let snapshot = history.first.map { latest in
+            WidgetSnapshot(weightKg: latest.weightKg,
+                           bodyFatPercentage: latest.composition?.bodyFatPercentage,
+                           date: latest.date,
+                           usePounds: settings.usePounds,
+                           recentWeighIns: history.prefix(14).map(\.date))
+        }
+        WidgetSnapshot.save(snapshot, appGroup: Self.appGroup)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     // MARK: Formatting

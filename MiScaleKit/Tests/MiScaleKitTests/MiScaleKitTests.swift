@@ -133,3 +133,41 @@ final class CompositionTests: XCTestCase {
         XCTAssertNil(c.visceralFat)
     }
 }
+
+final class WidgetSnapshotTests: XCTestCase {
+    private var calendar: Calendar = {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "UTC")!
+        return c
+    }()
+
+    private func date(_ day: Int, _ hour: Int, _ minute: Int) -> Date {
+        calendar.date(from: DateComponents(year: 2026, month: 9, day: day, hour: hour, minute: minute))!
+    }
+
+    private func snapshot(_ weighIns: [Date]) -> WidgetSnapshot {
+        WidgetSnapshot(weightKg: 70, bodyFatPercentage: nil, date: weighIns.first ?? Date(), usePounds: false,
+                       recentWeighIns: weighIns)
+    }
+
+    private lazy var history = [date(29, 7, 20), date(28, 7, 0), date(27, 7, 10)]
+
+    func testWindowAroundUsualTime() {
+        let window = snapshot(history).nextWeighInWindow(after: date(30, 5, 0), calendar: calendar)
+        XCTAssertEqual(window, DateInterval(start: date(30, 6, 40), end: date(30, 8, 10)))
+    }
+
+    func testMovesToTomorrowAfterWindow() {
+        let window = snapshot(history).nextWeighInWindow(after: date(30, 9, 0), calendar: calendar)
+        XCTAssertEqual(window?.start, calendar.date(from: DateComponents(year: 2026, month: 10, day: 1, hour: 6, minute: 40)))
+    }
+
+    func testMovesToTomorrowWhenAlreadyWeighedToday() {
+        let window = snapshot([date(30, 7, 5)] + history).nextWeighInWindow(after: date(30, 7, 30), calendar: calendar)
+        XCTAssertEqual(window?.start, calendar.date(from: DateComponents(year: 2026, month: 10, day: 1, hour: 6, minute: 40)))
+    }
+
+    func testNeedsThreeWeighIns() {
+        XCTAssertNil(snapshot(Array(history.prefix(2))).nextWeighInWindow(after: date(30, 5, 0), calendar: calendar))
+    }
+}

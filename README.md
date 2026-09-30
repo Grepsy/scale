@@ -14,6 +14,15 @@ listens. [docs/PROTOCOL.md](docs/PROTOCOL.md) explains the reverse-engineered fo
    (the body-composition measurement).
 3. The watch taps when the weigh-in is complete. The result shows up and is saved to Health.
 
+### Smart Stack widget
+
+Add the widget and you can open the app with one tap instead of hunting for it:
+turn the Digital Crown to open the Smart Stack, touch and hold, tap **+**, and choose
+**Scale**. It also works as a complication on watch faces with circular, corner,
+inline or rectangular slots. It shows your last weight and body fat. After a few
+weigh-ins, the watch also moves it up the stack around the time you usually weigh
+yourself (unless you already have that day).
+
 Swipe down for **History**, and again for **Settings**:
 - **Profile:** height, birth year and sex. These are read from Health when you allow it, and
   body composition needs them. Until they're set, only weight is saved.
@@ -35,8 +44,9 @@ xcodegen                 # creates MiScaleHealth.xcodeproj from project.yml
 open MiScaleHealth.xcodeproj
 ```
 
-In Xcode, pick your team under *Signing & Capabilities*. Change the bundle ID from
-`com.example.MiScaleHealth` if needed. Then pick your watch as the run destination and run.
+In Xcode, pick your team under *Signing & Capabilities* for both the **MiScaleHealth**
+and **ScaleWidget** targets. To use your own bundle ID, change `APP_BUNDLE_ID` in
+`project.yml` and re-run `xcodegen`. The widget ID and the shared app group follow it. Then pick your watch as the run destination and run.
 HealthKit and Bluetooth don't work in the simulator, so test on a real watch.
 
 ### Project layout
@@ -47,10 +57,12 @@ App/                 watchOS app (SwiftUI)
   HealthKitManager.swift writes samples, reads height / birth date / sex
   AppModel.swift        state, profile, history, glue
   Views/                Weigh, History, Settings screens
+Widget/              Smart Stack / complication widget (WidgetKit)
 MiScaleKit/          platform-independent Swift package
   ScaleAdvertisement    decodes the 0x181B service data
   MeasurementTracker    turns the packet stream into weigh-ins
   BodyComposition       Xiaomi body-composition formulas
+  WidgetSnapshot        data shared with the widget, usual-weigh-in-time logic
 tools/miscale_sniff.py   decode your scale's broadcasts from a Mac/PC (Python + bleak)
 docs/PROTOCOL.md         how the scale works
 ```
